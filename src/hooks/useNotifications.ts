@@ -9,6 +9,8 @@ export interface Notification {
   message: string;
   is_read: boolean;
   user_id?: string;
+  link?: string | null;
+  metadata?: any;
 }
 
 export const useNotifications = () => {
@@ -25,6 +27,7 @@ export const useNotifications = () => {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
+        .eq('is_read', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -43,6 +46,7 @@ export const useNotifications = () => {
 
   const markAsRead = async (id: string) => {
     try {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
@@ -50,8 +54,6 @@ export const useNotifications = () => {
         .eq('user_id', user?.id || '');
 
       if (error) throw error;
-
-      fetchNotifications();
     } catch (error: any) {
       toast({
         title: "Error marking notification as read",
@@ -64,13 +66,13 @@ export const useNotifications = () => {
   const markAllAsRead = async () => {
     try {
       if (!user) return;
+      setNotifications([]);
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('user_id', user.id)
         .eq('is_read', false);
       if (error) throw error;
-      fetchNotifications();
     } catch (error: any) {
       toast({ title: "Error marking all as read", description: error.message, variant: "destructive" });
     }
