@@ -7,19 +7,23 @@ export interface Notification {
   created_at: string;
   message: string;
   is_read: boolean;
+  user_id?: string;
 }
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchNotifications = async () => {
     try {
+      if (!user) { setNotifications([]); return; }
       setLoading(true);
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -57,7 +61,20 @@ export const useNotifications = () => {
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('notifications-feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   return {
     notifications,
