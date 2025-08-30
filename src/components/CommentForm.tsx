@@ -48,9 +48,11 @@ const CommentForm = ({
           <p className="text-muted-foreground mb-4">
             Sign in to share your thoughts and engage with the community.
           </p>
-          <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
-            Sign In to Comment
-          </Button>
+          <a href="/auth">
+            <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
+              Sign In to Comment
+            </Button>
+          </a>
         </CardContent>
       </Card>
     );
