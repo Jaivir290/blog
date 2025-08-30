@@ -144,11 +144,11 @@ const ProfilePage = () => {
                         tags: blog.tags || []
                       }}
                     />
-                    <Badge 
-                      variant={blog.status === 'approved' ? 'default' : blog.status === 'pending' ? 'secondary' : 'destructive'} 
+                    <Badge
+                      variant={blog.status === 'approved' ? 'default' : blog.status === 'pending' ? 'secondary' : 'destructive'}
                       className="absolute top-2 right-2"
                     >
-                      {blog.status}
+                      {blog.status === 'hidden' ? 'draft' : blog.status}
                     </Badge>
                   </div>
                 ))}
