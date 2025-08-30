@@ -22,13 +22,14 @@ import { formatDistanceToNow } from "date-fns";
 import { useBlogs } from "@/hooks/useBlogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const BlogPost = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { allBlogs, likeBlog } = useBlogs();
+  const { allBlogs, likeBlog, loading: blogsLoading } = useBlogs();
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
@@ -45,7 +46,7 @@ const BlogPost = () => {
     
     if (foundBlog) {
       setBlog(foundBlog);
-    } else {
+    } else if (!blogsLoading) {
       // Create a sample blog for demo purposes
       setBlog({
         id: blogId,
@@ -116,8 +117,8 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
       });
     }
     
-    setLoading(false);
-  }, [blogId, allBlogs, navigate]);
+    setLoading(foundBlog ? false : blogsLoading);
+  }, [blogId, allBlogs, blogsLoading, navigate]);
 
   const handleLike = async () => {
     if (!user) {
@@ -164,11 +165,16 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-3/4"></div>
-            <div className="h-4 bg-muted rounded w-1/2"></div>
-            <div className="h-64 bg-muted rounded"></div>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="space-y-6">
+            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-64 w-full rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-10/12" />
+            </div>
           </div>
         </div>
       </div>
