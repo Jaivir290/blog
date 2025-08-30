@@ -1,0 +1,276 @@
+import { useState, useEffect } from "react";
+import Header from "@/components/Header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye, Save, Send, Plus, X, Image } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBlogs } from "@/hooks/useBlogs";
+import { useNavigate } from "react-router-dom";
+
+const WritePage = () => {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { createBlog } = useBlogs();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  const addTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim()) && tags.length < 5) {
+      setTags([...tags, newTag.trim()]);
+      setNewTag("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && newTag.trim()) {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  const handleSaveDraft = () => {
+    toast({
+      title: "Draft Saved",
+      description: "Your article has been saved as a draft.",
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim() || !content.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in the title and content before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const { error } = await createBlog({
+      title: title.trim(),
+      content: content.trim(),
+      excerpt: excerpt.trim() || undefined,
+      tags: tags.length > 0 ? tags : undefined
+    });
+
+    if (!error) {
+      // Reset form
+      setTitle("");
+      setContent("");
+      setExcerpt("");
+      setTags([]);
+    }
+    
+    setIsSubmitting(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Write New Article</h1>
+            <p className="text-muted-foreground mt-2">
+              Share your knowledge with the developer community
+            </p>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleSaveDraft}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Draft
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-gradient-primary hover:opacity-90 transition-opacity"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {isSubmitting ? "Submitting..." : "Submit for Review"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Editor */}
+          <div className="md:col-span-2 space-y-6">
+            <Card className="bg-gradient-card backdrop-blur-sm border-border/60">
+              <CardContent className="pt-6">
+                <Tabs defaultValue="write" className="w-full">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="write">Write</TabsTrigger>
+                    <TabsTrigger value="preview">
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="write" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Article Title</Label>
+                      <Input
+                        id="title"
+                        placeholder="Enter your article title..."
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="text-lg font-semibold"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="excerpt">Excerpt (Optional)</Label>
+                      <Textarea
+                        id="excerpt"
+                        placeholder="Brief description of your article..."
+                        value={excerpt}
+                        onChange={(e) => setExcerpt(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="content">Content</Label>
+                      <Textarea
+                        id="content"
+                        placeholder="Write your article content here... (Markdown supported)"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        rows={20}
+                        className="font-mono"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">
+                        <Image className="h-4 w-4 mr-2" />
+                        Add Image
+                      </Button>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="preview" className="space-y-4">
+                    <div className="prose prose-slate dark:prose-invert max-w-none">
+                      {title && <h1 className="text-3xl font-bold text-foreground">{title}</h1>}
+                      {excerpt && <p className="text-xl text-muted-foreground italic">{excerpt}</p>}
+                      {content ? (
+                        <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+                          {content}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground italic">Start writing to see the preview...</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Tags */}
+            <Card className="bg-gradient-card backdrop-blur-sm border-border/60">
+              <CardHeader>
+                <CardTitle className="text-lg">Tags</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add tag..."
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addTag}
+                    disabled={!newTag.trim() || tags.length >= 5}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
+                      onClick={() => removeTag(tag)}
+                    >
+                      {tag}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                </div>
+                
+                {tags.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Add tags to help readers find your article
+                  </p>
+                )}
+                
+                <p className="text-xs text-muted-foreground">
+                  {tags.length}/5 tags used
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Publishing Info */}
+            <Card className="bg-gradient-card backdrop-blur-sm border-border/60">
+              <CardHeader>
+                <CardTitle className="text-lg">Publishing</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between">
+                  <span>Status:</span>
+                  <Badge variant="secondary">Draft</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Visibility:</span>
+                  <span>Public After Approval</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Review:</span>
+                  <span>Required</span>
+                </div>
+                <div className="text-xs bg-muted/50 p-3 rounded-lg">
+                  <p className="font-medium mb-1">📝 Review Process</p>
+                  <p>Articles are reviewed by our team within 24 hours to ensure quality and community guidelines compliance.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default WritePage;
