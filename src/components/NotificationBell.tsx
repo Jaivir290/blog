@@ -51,9 +51,12 @@ const NotificationBell = () => {
                 <div key={notification.id}>
                   <DropdownMenuItem
                     className={`flex flex-col items-start p-2 ${!notification.is_read ? 'bg-accent/40' : ''}`}
-                    onClick={() => !notification.is_read && markAsRead(notification.id)}
+                    onClick={() => onClickItem(notification)}
                   >
                     <p className="text-sm text-foreground">{notification.message}</p>
+                    {notification.metadata?.reason && (
+                      <p className="text-xs text-destructive mt-1">Reason: {notification.metadata.reason}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {new Date(notification.created_at).toLocaleString()}
                     </p>
