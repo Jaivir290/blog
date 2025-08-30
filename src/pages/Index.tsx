@@ -67,16 +67,16 @@ const Index = () => {
               <div className="text-center py-8">
                 {isSearching ? 'Searching...' : 'Loading blogs...'}
               </div>
-            ) : blogs.length === 0 && searchQuery ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No articles found matching your search.</p>
-                <p className="mt-2">Try different keywords or check your spelling.</p>
+            ) : blogs.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>{searchQuery ? 'No articles found matching your search.' : 'No articles yet.'}</p>
+                {searchQuery && <p className="mt-2">Try different keywords or check your spelling.</p>}
               </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {blogs.slice(0, 6).map((blog) => (
-                  <BlogCard 
-                    key={blog.id} 
+                  <BlogCard
+                    key={blog.id}
                     blog={{
                       id: blog.id,
                       title: blog.title,
@@ -134,19 +134,20 @@ const Index = () => {
               <div className="text-center py-8">
                 {isSearching ? 'Searching...' : 'Loading blogs...'}
               </div>
-            ) : blogs.length === 0 && searchQuery ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No featured articles found matching your search.</p>
-                <p className="mt-2">Try different keywords or check your spelling.</p>
-              </div>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {blogs
-                  .filter((blog) => blog.views_count > 100)
-                  .slice(0, 6)
-                  .map((blog) => (
-                    <BlogCard 
-                      key={blog.id} 
+            ) : (() => {
+              const featured = blogs.filter((b) => (b.views_count || 0) >= 150 || (b.likes_count || 0) >= 40);
+              if (featured.length === 0) {
+                return (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>No featured articles yet.</p>
+                  </div>
+                );
+              }
+              return (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {featured.slice(0, 6).map((blog) => (
+                    <BlogCard
+                      key={blog.id}
                       blog={{
                         id: blog.id,
                         title: blog.title,
@@ -162,8 +163,9 @@ const Index = () => {
                       onLike={() => likeBlog(blog.id)}
                     />
                   ))}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </div>
