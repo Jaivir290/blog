@@ -570,6 +570,43 @@ export const useAdminBlogs = () => {
   };
 };
 
+export const useSavedBlogs = () => {
+  const [savedBlogs, setSavedBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchSaved = async () => {
+    try {
+      setLoading(true);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) { setSavedBlogs([]); return; }
+      const { data: savedRows, error: savedErr } = await (supabase as any)
+        .from('saved_blogs')
+        .select('blog_id')
+        .eq('user_id', user.id);
+      if (savedErr) throw savedErr;
+      const ids = (savedRows || []).map((r: any) => r.blog_id);
+      if (!ids.length) { setSavedBlogs([]); return; }
+      const { data, error } = await supabase
+        .from('blogs')
+        .select(`*, profiles:author_id ( display_name, avatar_url )`)
+        .in('id', ids)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setSavedBlogs((data as Blog[]) || []);
+    } catch (error: any) {
+      toast({ title: 'Error loading saved blogs', description: error.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchSaved(); }, []);
+
+  return { savedBlogs, loading, fetchSaved };
+};
+
 export const useAllBlogs = () => {
   const [allBlogs, setAllBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
