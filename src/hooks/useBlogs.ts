@@ -206,11 +206,26 @@ export const useBlogs = () => {
 
       if (error) throw error;
 
-      if (profile?.role === 'admin') {
-        await supabase.from('notifications').insert([{
-          message: `A new blog has been posted by ${profile.display_name}`,
-        }]);
-      }
+      // Notify admins of new pending blog and notify the author of submission
+      try {
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('role', 'admin');
+        const adminRows = adminProfiles || [];
+        if (adminRows.length) {
+          await supabase
+            .from('notifications')
+            .insert(
+              adminRows.map((a: any) => ({
+                user_id: a.user_id,
+                message: `${profile?.display_name || 'A user'} submitted: ${blogData.title}`,
+                is_read: false,
+              }))
+            );
+        }
+        await supabase.from('notifications').insert([{ user_id: user.id, message: `Submitted for review: ${blogData.title}`, is_read: false }]);
+      } catch (_) {}
 
       toast({
         title: "Blog Submitted!",
