@@ -20,6 +20,7 @@ export interface Blog {
     display_name: string;
     avatar_url?: string;
   };
+  is_liked?: boolean;
 }
 
 export const useBlogs = () => {
@@ -107,8 +108,22 @@ export const useBlogs = () => {
         setBlogs(sampleBlogs);
       } else {
         const blogData = (data as Blog[]) || [];
-        setAllBlogs(blogData);
-        setBlogs(blogData);
+        const currentUser = (await supabase.auth.getUser()).data.user;
+        if (currentUser && blogData.length) {
+          const ids = blogData.map(b => b.id);
+          const { data: likesRows } = await supabase
+            .from('blog_likes')
+            .select('blog_id')
+            .eq('user_id', currentUser.id)
+            .in('blog_id', ids);
+          const likedSet = new Set((likesRows || []).map(r => r.blog_id));
+          const withLiked = blogData.map(b => ({ ...b, is_liked: likedSet.has(b.id) }));
+          setAllBlogs(withLiked);
+          setBlogs(withLiked);
+        } else {
+          setAllBlogs(blogData);
+          setBlogs(blogData);
+        }
       }
     } catch (error: any) {
       // If there's an error, show sample blogs as fallback
@@ -212,7 +227,8 @@ export const useBlogs = () => {
 
   const likeBlog = async (blogId: string) => {
     try {
-      const user = (await supabase.auth.getUser()).data.user;
+      const userRes = await supabase.auth.getUser();
+      const user = userRes.data.user;
       if (!user) {
         toast({
           title: "Sign in required",
@@ -222,34 +238,35 @@ export const useBlogs = () => {
         return;
       }
 
-      const { data: existingLike } = await supabase
-        .from('blog_likes')
-        .select('id')
-        .eq('blog_id', blogId)
-        .eq('user_id', user.id)
-        .single();
+      const getLiked = (list: Blog[]) => list.find(b => b.id === blogId)?.is_liked ?? false;
+      const currentlyLiked = getLiked(allBlogs) || getLiked(blogs) || getLiked(trendingBlogs);
+      const delta = currentlyLiked ? -1 : 1;
+      const updateList = (list: Blog[]) => list.map(b => b.id === blogId ? { ...b, likes_count: (b.likes_count || 0) + delta, is_liked: !currentlyLiked } : b);
 
-      if (existingLike) {
-        await supabase
+      setAllBlogs(updateList);
+      setBlogs(updateList);
+      setTrendingBlogs(updateList);
+
+      if (currentlyLiked) {
+        const { error } = await supabase
           .from('blog_likes')
           .delete()
           .eq('blog_id', blogId)
           .eq('user_id', user.id);
-        toast({ title: "Removed like" });
+        if (error) throw error;
       } else {
-        await supabase
+        const { error } = await supabase
           .from('blog_likes')
           .insert({ blog_id: blogId, user_id: user.id });
-        toast({ title: "Liked" });
+        if (error) throw error;
       }
-
-      fetchBlogs();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+      fetchBlogs();
     }
   };
 
@@ -276,7 +293,21 @@ export const useBlogs = () => {
 
       if (error) throw error;
 
-      setTrendingBlogs((data as Blog[]) || []);
+      {
+        let list = (data as Blog[]) || [];
+        const currentUser = (await supabase.auth.getUser()).data.user;
+        if (currentUser && list.length) {
+          const ids = list.map(b => b.id);
+          const { data: likesRows } = await supabase
+            .from('blog_likes')
+            .select('blog_id')
+            .eq('user_id', currentUser.id)
+            .in('blog_id', ids);
+        const likedSet = new Set((likesRows || []).map(r => r.blog_id));
+        list = list.map(b => ({ ...b, is_liked: likedSet.has(b.id) }));
+        }
+        setTrendingBlogs(list);
+      }
     } catch (error: any) {
       toast({
         title: "Error loading trending blogs",
