@@ -86,8 +86,9 @@ const WritePage = () => {
       setContent("");
       setExcerpt("");
       setTags([]);
+      setFeaturedImageUrl("");
     }
-    
+
     setIsSubmitting(false);
   };
 
