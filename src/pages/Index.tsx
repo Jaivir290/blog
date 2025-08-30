@@ -1,5 +1,4 @@
 import Header from "@/components/Header";
-import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import BlogCard from "@/components/BlogCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
