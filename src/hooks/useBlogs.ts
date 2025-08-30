@@ -187,6 +187,7 @@ export const useBlogs = () => {
     content: string;
     excerpt?: string;
     tags?: string[];
+    featured_image_url?: string | null;
   }) => {
     try {
       if (!user) throw new Error("User not authenticated");
