@@ -96,11 +96,21 @@ const WritePage = () => {
     }
   };
 
-  const handleSaveDraft = () => {
-    toast({
-      title: "Draft Saved",
-      description: "Your article has been saved as a draft.",
+  const handleSaveDraft = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to save drafts.", variant: "destructive" });
+      return;
+    }
+    const { error } = await createBlogDraft({
+      title: title.trim() || 'Untitled',
+      content: content,
+      excerpt: excerpt.trim() || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      featured_image_url: featuredImageUrl || null,
     });
+    if (!error) {
+      toast({ title: "Draft saved", description: "You can find it in your profile." });
+    }
   };
 
   const handleSubmit = async () => {
