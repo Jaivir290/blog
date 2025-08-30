@@ -48,7 +48,7 @@ export const useComments = (blogId: string) => {
       let likedByUser = new Set<string>();
 
       if (allIds.length > 0) {
-        const { data: likeRows, error: likeErr } = await supabase
+        const { data: likeRows, error: likeErr } = await (supabase as any)
           .from('comment_likes')
           .select('comment_id, user_id')
           .in('comment_id', allIds);
@@ -201,14 +201,14 @@ export const useComments = (blogId: string) => {
 
     try {
       if (currentlyLiked) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('comment_likes')
           .delete()
           .eq('comment_id', commentId)
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('comment_likes')
           .insert({ comment_id: commentId, user_id: user.id });
         if (error) throw error;
