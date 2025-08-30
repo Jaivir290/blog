@@ -221,10 +221,12 @@ export const useBlogs = () => {
                 user_id: a.user_id,
                 message: `${profile?.display_name || 'A user'} submitted: ${blogData.title}`,
                 is_read: false,
+                link: '/admin?section=pending',
+                metadata: { blogId: (data as any)?.id }
               }))
             );
         }
-        await supabase.from('notifications').insert([{ user_id: user.id, message: `Submitted for review: ${blogData.title}`, is_read: false }]);
+        await supabase.from('notifications').insert([{ user_id: user.id, message: `Submitted for review: ${blogData.title}`, is_read: false, link: '/profile' }]);
       } catch (_) {}
 
       toast({
@@ -494,7 +496,7 @@ export const useAdminBlogs = () => {
     }
   };
 
-  const updateBlogStatus = async (blogId: string, status: 'approved' | 'rejected' | 'hidden') => {
+  const updateBlogStatus = async (blogId: string, status: 'approved' | 'rejected' | 'hidden', reason?: string) => {
     try {
       const { data: updated, error } = await supabase
         .from('blogs')
@@ -512,7 +514,7 @@ export const useAdminBlogs = () => {
             : status === 'rejected'
               ? `Your article was rejected: ${updated.title}`
               : `Your article status changed to ${status}: ${updated.title}`;
-          await supabase.from('notifications').insert([{ user_id: (updated as any).author_id, message, is_read: false }]);
+          await supabase.from('notifications').insert([{ user_id: (updated as any).author_id, message, is_read: false, link: status === 'approved' ? `/blog/${(updated as any).id}` : '/profile', metadata: status === 'rejected' && reason ? { reason } : undefined }]);
         }
       } catch (_) {}
 
