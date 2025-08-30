@@ -16,6 +16,8 @@ interface BlogCardProps {
     image: string;
     featured?: boolean;
     tags: string[];
+    liked?: boolean;
+    commentsCount?: number;
   };
   onLike?: () => void;
 }
@@ -79,23 +81,25 @@ const BlogCard: React.FC<BlogCardProps> = ({ blog, onLike }) => {
 
         <CardFooter className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-muted-foreground hover:text-destructive"
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`hover:text-destructive ${blog.liked ? 'text-destructive' : 'text-muted-foreground'}`}
               onClick={(e) => {
-                e.preventDefault(); // Prevent navigation when clicking like
+                e.preventDefault();
                 onLike?.();
               }}
             >
-              <Heart className="h-4 w-4 mr-1" />
+              <Heart className={`h-4 w-4 mr-1 ${blog.liked ? 'fill-current' : ''}`} />
               {blog.likes}
             </Button>
             
-            <div className="flex items-center text-muted-foreground text-sm">
-              <MessageCircle className="h-4 w-4 mr-1" />
-              {Math.floor(Math.random() * 20) + 1} {/* Mock comment count */}
-            </div>
+            {typeof blog.commentsCount === 'number' && (
+              <div className="flex items-center text-muted-foreground text-sm">
+                <MessageCircle className="h-4 w-4 mr-1" />
+                {blog.commentsCount}
+              </div>
+            )}
           </div>
           
           <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
