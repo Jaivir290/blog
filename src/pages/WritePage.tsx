@@ -282,6 +282,54 @@ const WritePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Image Dialog */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHdr>
+            <DialogTitle>Add image</DialogTitle>
+            <DialogDescription>Paste an image URL to insert and optionally set as cover.</DialogDescription>
+          </DialogHdr>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="img-url">Image URL</Label>
+              <Input id="img-url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="img-alt">Alt text</Label>
+              <Input id="img-alt" value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Describe the image" />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="cover" checked={setAsCover} onCheckedChange={(v) => setSetAsCover(!!v)} />
+              <Label htmlFor="cover">Set as cover image</Label>
+            </div>
+            {imageUrl && (
+              <div className="rounded-md overflow-hidden border border-border/60">
+                <img src={imageUrl} alt={imageAlt || 'preview'} className="w-full h-40 object-cover" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImageDialog(false)}>Cancel</Button>
+            <Button onClick={() => {
+              const valid = /^https?:\/\//i.test(imageUrl);
+              if (!valid) {
+                toast({ title: "Invalid URL", description: "Enter a valid image URL.", variant: "destructive" });
+                return;
+              }
+              const alt = imageAlt.trim() || 'image';
+              const toInsert = `\n![${alt}](${imageUrl})\n`;
+              setContent((prev) => prev + toInsert);
+              if (setAsCover) setFeaturedImageUrl(imageUrl);
+              setImageUrl("");
+              setImageAlt("");
+              setSetAsCover(false);
+              setShowImageDialog(false);
+            }}>Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHdr>
