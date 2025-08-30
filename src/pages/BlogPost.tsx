@@ -21,6 +21,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { useBlogs } from "@/hooks/useBlogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const BlogPost = () => {
   const { blogId } = useParams<{ blogId: string }>();
