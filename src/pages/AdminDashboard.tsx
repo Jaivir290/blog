@@ -23,6 +23,7 @@ import { useAdminBlogs } from "@/hooks/useBlogs";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useNavigate, useLocation } from "react-router-dom";
 import AllBlogs from "@/components/AllBlogs";
+import { useEffect, useState } from "react";
 
 const AdminDashboard = () => {
   const { user, profile } = useAuth();
