@@ -97,13 +97,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: window.location.origin + '/auth'
       },
     });
     if (error) {
       toast({
-        title: "Sign Up Failed",
+        title: "Sign up failed",
         description: error.message,
         variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Verify your email",
+        description: "We've sent a confirmation link to your inbox. Please verify to complete sign up.",
       });
     }
     return { error };
@@ -113,9 +119,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({
-        title: "Sign In Failed",
+        title: "Sign in failed",
         description: error.message,
         variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Signed in",
+        description: "Signed in successfully.",
       });
     }
     return { error };
