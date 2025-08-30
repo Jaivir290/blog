@@ -30,9 +30,9 @@ import { extractFirstImageUrl } from "@/lib/utils";
 const BlogPost = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
-  const { allBlogs, likeBlog, loading: blogsLoading } = useBlogs();
+  const { allBlogs, likeBlog, toggleSaveBlog, setFeatured, loading: blogsLoading } = useBlogs();
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
@@ -50,6 +50,7 @@ const BlogPost = () => {
     if (foundBlog) {
       setBlog(foundBlog);
       setIsLiked(!!foundBlog.is_liked);
+      setIsBookmarked(!!foundBlog.is_saved);
     } else if (!blogsLoading) {
       setBlog(null);
       /* sample removed
@@ -146,9 +147,16 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
     }
   };
 
-  const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-    // Implement bookmark functionality
+  const handleBookmark = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to save this article.", variant: "destructive" });
+      return;
+    }
+    const next = !isBookmarked;
+    setIsBookmarked(next);
+    if (blog) {
+      await toggleSaveBlog(blog.id);
+    }
   };
 
   const handleShare = async () => {
@@ -303,7 +311,21 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
               <Button variant="outline" size="sm" onClick={handleBookmark}>
                 <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
               </Button>
-              
+
+              {profile?.role === 'admin' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const next = !blog?.featured;
+                    setBlog((b: any) => (b ? { ...b, featured: next } : b));
+                    if (blog) await setFeatured(blog.id, next);
+                  }}
+                >
+                  {blog?.featured ? 'Unfeature' : 'Feature'}
+                </Button>
+              )}
+
               <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="h-4 w-4" />
               </Button>
