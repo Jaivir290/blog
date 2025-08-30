@@ -11,7 +11,8 @@ import { Eye, Save, Send, Plus, X, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBlogs } from "@/hooks/useBlogs";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader as DialogHdr, DialogTitle } from "@/components/ui/dialog";
 
 const WritePage = () => {
   const [title, setTitle] = useState("");
@@ -23,13 +24,11 @@ const WritePage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { createBlog } = useBlogs();
-  const navigate = useNavigate();
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-    }
-  }, [user, navigate]);
+    setShowAuthDialog(!user);
+  }, [user]);
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim()) && tags.length < 5) {
@@ -100,13 +99,13 @@ const WritePage = () => {
           </div>
           
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleSaveDraft}>
+            <Button variant="outline" onClick={handleSaveDraft} disabled={!user}>
               <Save className="h-4 w-4 mr-2" />
               Save Draft
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={!user || isSubmitting}
               className="bg-gradient-primary hover:opacity-90 transition-opacity"
             >
               <Send className="h-4 w-4 mr-2" />
@@ -269,6 +268,22 @@ const WritePage = () => {
           </div>
         </div>
       </div>
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHdr>
+            <DialogTitle>Sign in required</DialogTitle>
+            <DialogDescription>
+              You need to be signed in to write and submit an article.
+            </DialogDescription>
+          </DialogHdr>
+          <DialogFooter className="sm:justify-end">
+            <Link to="/auth">
+              <Button>Sign In</Button>
+            </Link>
+            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>Maybe later</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
