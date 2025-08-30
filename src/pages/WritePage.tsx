@@ -101,7 +101,7 @@ const WritePage = () => {
       toast({ title: "Sign in required", description: "Please sign in to save drafts.", variant: "destructive" });
       return;
     }
-    const { error } = await createBlogDraft({
+    const { error } = await createDraft({
       title: title.trim() || 'Untitled',
       content: content,
       excerpt: excerpt.trim() || undefined,
