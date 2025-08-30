@@ -17,17 +17,22 @@ export function ThemeProvider({ children, defaultTheme = "system", storageKey = 
 
     root.classList.remove("light", "dark");
 
+    const apply = (mode: "light" | "dark") => {
+      root.classList.add(mode);
+      root.setAttribute("data-theme", mode);
+    };
+
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
         .matches
         ? "dark"
         : "light";
 
-      root.classList.add(systemTheme);
+      apply(systemTheme);
       return;
     }
 
-    root.classList.add(theme);
+    apply(theme as any);
   }, [theme]);
 
   const value = {
