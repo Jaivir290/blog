@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import AuthDialog from "@/components/AuthDialog";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -17,6 +18,7 @@ interface HeaderProps {
 const Header = ({ onSearch, onClearSearch, searchQuery }: HeaderProps) => {
   const { user, profile, signOut } = useAuth();
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery || '');
+  const [authOpen, setAuthOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +67,9 @@ const Header = ({ onSearch, onClearSearch, searchQuery }: HeaderProps) => {
           </form>
         </div>
 
-        {/* Auth Section */}
+        {/* Auth/Theme Section */}
         <div className="flex items-center space-x-4">
+          <ThemeSwitcher />
           {user ? (
             <>
               <Link to="/write">
@@ -75,12 +78,9 @@ const Header = ({ onSearch, onClearSearch, searchQuery }: HeaderProps) => {
                   Write
                 </Button>
               </Link>
-              <ThemeSwitcher />
-              
               <Button variant="ghost" size="sm">
                 <Bell className="h-4 w-4" />
               </Button>
-              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -130,13 +130,12 @@ const Header = ({ onSearch, onClearSearch, searchQuery }: HeaderProps) => {
               </DropdownMenu>
             </>
           ) : (
-            <Link to="/auth">
-              <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
-                Sign In
-              </Button>
-            </Link>
+            <Button className="bg-gradient-primary hover:opacity-90 transition-opacity" onClick={() => setAuthOpen(true)}>
+              Sign In
+            </Button>
           )}
         </div>
+        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
       </div>
 
       {/* Mobile Search */}
