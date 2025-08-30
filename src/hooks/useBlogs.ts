@@ -115,7 +115,7 @@ export const useBlogs = () => {
           const ids = blogData.map(b => b.id);
           const [{ data: likesRows }, { data: savedRows }] = await Promise.all([
             supabase.from('blog_likes').select('blog_id').eq('user_id', currentUser.id).in('blog_id', ids),
-            supabase.from('saved_blogs').select('blog_id').eq('user_id', currentUser.id).in('blog_id', ids),
+            (supabase as any).from('saved_blogs').select('blog_id').eq('user_id', currentUser.id).in('blog_id', ids),
           ]);
           const likedSet = new Set((likesRows || []).map(r => r.blog_id));
           const savedSet = new Set((savedRows || []).map(r => r.blog_id));
@@ -295,14 +295,14 @@ export const useBlogs = () => {
       setTrendingBlogs(updateList);
 
       if (currentlySaved) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('saved_blogs')
           .delete()
           .eq('blog_id', blogId)
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('saved_blogs')
           .insert({ blog_id: blogId, user_id: user.id });
         if (error) throw error;
