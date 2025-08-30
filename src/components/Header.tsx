@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import AuthDialog from "@/components/AuthDialog";
+import NotificationBell from "@/components/NotificationBell";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -78,9 +79,7 @@ const Header = ({ onSearch, onClearSearch, searchQuery }: HeaderProps) => {
                   Write
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm">
-                <Bell className="h-4 w-4" />
-              </Button>
+              <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
