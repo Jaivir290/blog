@@ -46,7 +46,8 @@ export const useNotifications = () => {
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id || '');
 
       if (error) throw error;
 
@@ -57,6 +58,21 @@ export const useNotifications = () => {
         description: error.message,
         variant: "destructive"
       });
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      if (!user) return;
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+      if (error) throw error;
+      fetchNotifications();
+    } catch (error: any) {
+      toast({ title: "Error marking all as read", description: error.message, variant: "destructive" });
     }
   };
 
@@ -81,6 +97,7 @@ export const useNotifications = () => {
     notifications,
     loading,
     fetchNotifications,
-    markAsRead
+    markAsRead,
+    markAllAsRead
   };
 };
