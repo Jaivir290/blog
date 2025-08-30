@@ -46,8 +46,10 @@ const BlogPost = () => {
     
     if (foundBlog) {
       setBlog(foundBlog);
+      setIsLiked(!!foundBlog.is_liked);
     } else if (!blogsLoading) {
-      // Create a sample blog for demo purposes
+      setBlog(null);
+      /* sample removed
       setBlog({
         id: blogId,
         title: 'Understanding Modern Web Development: A Comprehensive Guide',
@@ -114,9 +116,9 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
           avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane',
           bio: 'Senior Full-Stack Developer with 8+ years of experience building scalable web applications.'
         }
-      });
+      }); */
     }
-    
+
     setLoading(foundBlog ? false : blogsLoading);
   }, [blogId, allBlogs, blogsLoading, navigate]);
 
