@@ -211,7 +211,14 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
         <Button 
           variant="ghost" 
           className="mb-6 -ml-2" 
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            const canGoBack = typeof window !== 'undefined' && window.history.state && window.history.state.idx > 0;
+            if (canGoBack) {
+              navigate(-1);
+            } else {
+              navigate('/');
+            }
+          }}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
