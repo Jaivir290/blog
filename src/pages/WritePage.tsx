@@ -14,6 +14,7 @@ import { useBlogs } from "@/hooks/useBlogs";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader as DialogHdr, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 
 const WritePage = () => {
   const [title, setTitle] = useState("");
@@ -27,9 +28,10 @@ const WritePage = () => {
   const [imageAlt, setImageAlt] = useState("");
   const [setAsCover, setSetAsCover] = useState(false);
   const [featuredImageUrl, setFeaturedImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { createBlog } = useBlogs();
+  const { createBlog, createDraft } = useBlogs();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   useEffect(() => {
@@ -54,11 +56,61 @@ const WritePage = () => {
     }
   };
 
-  const handleSaveDraft = () => {
-    toast({
-      title: "Draft Saved",
-      description: "Your article has been saved as a draft.",
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!user) {
+        toast({ title: "Sign in required", description: "Please sign in to upload images.", variant: "destructive" });
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast({ title: "Invalid file", description: "Please select an image file.", variant: "destructive" });
+        return;
+      }
+      // Limit to ~5MB
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "File too large", description: "Max size is 5MB.", variant: "destructive" });
+        return;
+      }
+
+      setUploadingImage(true);
+      const path = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("images").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+      if (uploadError) throw uploadError;
+
+      const { data: pub } = supabase.storage.from("images").getPublicUrl(path);
+      const publicUrl = pub.publicUrl;
+      setImageUrl(publicUrl);
+      toast({ title: "Image uploaded", description: "Ready to insert." });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
+      // Reset input value to allow uploading the same file again if needed
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to save drafts.", variant: "destructive" });
+      return;
+    }
+    const { error } = await createDraft({
+      title: title.trim() || 'Untitled',
+      content: content,
+      excerpt: excerpt.trim() || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      featured_image_url: featuredImageUrl || null,
     });
+    if (!error) {
+      toast({ title: "Draft saved", description: "You can find it in your profile." });
+    }
   };
 
   const handleSubmit = async () => {
@@ -77,7 +129,8 @@ const WritePage = () => {
       title: title.trim(),
       content: content.trim(),
       excerpt: excerpt.trim() || undefined,
-      tags: tags.length > 0 ? tags : undefined
+      tags: tags.length > 0 ? tags : undefined,
+      featured_image_url: featuredImageUrl || null,
     });
 
     if (!error) {
@@ -295,6 +348,12 @@ const WritePage = () => {
             <div className="space-y-2">
               <Label htmlFor="img-url">Image URL</Label>
               <Input id="img-url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+            </div>
+            <div className="text-center text-xs text-muted-foreground">or</div>
+            <div className="space-y-2">
+              <Label htmlFor="img-file">Upload image</Label>
+              <Input id="img-file" type="file" accept="image/*" disabled={uploadingImage} onChange={handleImageFileChange} />
+              {uploadingImage && <p className="text-xs">Uploading...</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="img-alt">Alt text</Label>

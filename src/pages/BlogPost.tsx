@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { extractFirstImageUrl } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const BlogPost = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -158,6 +159,29 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
       await toggleSaveBlog(blog.id);
     }
   };
+
+  useEffect(() => {
+    const fetchIfNeeded = async () => {
+      if (blog || blogsLoading || !blogId) return;
+      const { data, error } = await supabase
+        .from('blogs')
+        .select(`*, profiles:author_id ( display_name, avatar_url, bio )`)
+        .eq('id', blogId)
+        .single();
+      if (error || !data) {
+        setLoading(false);
+        return;
+      }
+      const isApproved = data.status === 'approved';
+      const isAuthor = user && data.author_id === user.id;
+      const isAdmin = profile?.role === 'admin';
+      if (isApproved || isAuthor || isAdmin) {
+        setBlog(data as any);
+      }
+      setLoading(false);
+    };
+    fetchIfNeeded();
+  }, [blogId, blog, blogsLoading, user, profile]);
 
   const handleShare = async () => {
     if (navigator.share) {

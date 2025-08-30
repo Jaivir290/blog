@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import Header from "@/components/Header";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,20 +20,31 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminBlogs } from "@/hooks/useBlogs";
 import { useAnalytics } from "@/hooks/useAnalytics";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AllBlogs from "@/components/AllBlogs";
+import { useEffect, useState } from "react";
 
 const AdminDashboard = () => {
   const { user, profile } = useAuth();
   const { pendingBlogs, loading, updateBlogStatus, deleteBlog } = useAdminBlogs();
   const { platformAnalytics } = useAnalytics();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [tab, setTab] = useState<'analytics' | 'pending' | 'all'>('analytics');
 
   useEffect(() => {
     if (!user || profile?.role !== 'admin') {
       navigate('/');
     }
   }, [user, profile, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    if (section === 'pending' || section === 'all' || section === 'analytics') {
+      setTab(section as any);
+    }
+  }, [location.search]);
 
   if (!profile || profile.role !== 'admin') {
     return <div>Access denied</div>;
@@ -115,7 +125,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Content Management */}
-        <Tabs defaultValue="analytics" className="space-y-6">
+        <Tabs value={tab} onValueChange={(v:any)=>setTab(v)} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -188,7 +198,10 @@ const AdminDashboard = () => {
                         <Button 
                           size="sm"
                           variant="destructive"
-                          onClick={() => updateBlogStatus(blog.id, 'rejected')}
+                          onClick={() => {
+                            const reason = window.prompt('Provide a rejection reason (optional):') || undefined;
+                            updateBlogStatus(blog.id, 'rejected', reason);
+                          }}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
                           Reject

@@ -184,6 +184,33 @@ export const useBlogs = () => {
     setBlogs(allBlogs);
   };
 
+  const createDraft = async (blogData: {
+    title: string;
+    content: string;
+    excerpt?: string;
+    tags?: string[];
+    featured_image_url?: string | null;
+  }) => {
+    try {
+      if (!user) throw new Error("User not authenticated");
+      const { data, error } = await supabase
+        .from('blogs')
+        .insert([{
+          ...blogData,
+          author_id: user.id,
+          status: 'hidden'
+        }])
+        .select()
+        .single();
+      if (error) throw error;
+      toast({ title: "Draft saved", description: "You can continue editing from your profile." });
+      return { data, error: null };
+    } catch (error: any) {
+      toast({ title: "Failed to save draft", description: error.message, variant: "destructive" });
+      return { data: null, error } as any;
+    }
+  };
+
   const createBlog = async (blogData: {
     title: string;
     content: string;
@@ -206,11 +233,28 @@ export const useBlogs = () => {
 
       if (error) throw error;
 
-      if (profile?.role === 'admin') {
-        await supabase.from('notifications').insert([{
-          message: `A new blog has been posted by ${profile.display_name}`,
-        }]);
-      }
+      // Notify admins of new pending blog and notify the author of submission
+      try {
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('role', 'admin');
+        const adminRows = adminProfiles || [];
+        if (adminRows.length) {
+          await supabase
+            .from('notifications')
+            .insert(
+              adminRows.map((a: any) => ({
+                user_id: a.user_id,
+                message: `${profile?.display_name || 'A user'} submitted: ${blogData.title}`,
+                is_read: false,
+                link: '/admin?section=pending',
+                metadata: { blogId: (data as any)?.id }
+              }))
+            );
+        }
+        await supabase.from('notifications').insert([{ user_id: user.id, message: `Submitted for review: ${blogData.title}`, is_read: false, link: '/profile' }]);
+      } catch (_) {}
 
       toast({
         title: "Blog Submitted!",
@@ -390,6 +434,7 @@ export const useBlogs = () => {
     loading,
     searchQuery,
     fetchBlogs,
+    createDraft,
     createBlog,
     likeBlog,
     toggleSaveBlog,
@@ -479,20 +524,33 @@ export const useAdminBlogs = () => {
     }
   };
 
-  const updateBlogStatus = async (blogId: string, status: 'approved' | 'rejected' | 'hidden') => {
+  const updateBlogStatus = async (blogId: string, status: 'approved' | 'rejected' | 'hidden', reason?: string) => {
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('blogs')
         .update({ status })
-        .eq('id', blogId);
+        .eq('id', blogId)
+        .select('id,title,author_id')
+        .single();
 
       if (error) throw error;
-      
+
+      try {
+        if (updated?.author_id) {
+          const message = status === 'approved'
+            ? `Your article was approved: ${updated.title}`
+            : status === 'rejected'
+              ? `Your article was rejected: ${updated.title}`
+              : `Your article status changed to ${status}: ${updated.title}`;
+          await supabase.from('notifications').insert([{ user_id: (updated as any).author_id, message, is_read: false, link: status === 'approved' ? `/blog/${(updated as any).id}` : '/profile', metadata: status === 'rejected' && reason ? { reason } : undefined }]);
+        }
+      } catch (_) {}
+
       toast({
         title: "Blog Updated",
         description: `Blog has been ${status}.`,
       });
-      
+
       fetchPendingBlogs();
     } catch (error: any) {
       toast({
@@ -538,6 +596,82 @@ export const useAdminBlogs = () => {
     updateBlogStatus,
     deleteBlog
   };
+};
+
+export const useLikedBlogs = () => {
+  const [likedBlogs, setLikedBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchLiked = async () => {
+    try {
+      setLoading(true);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) { setLikedBlogs([]); return; }
+      const { data: likeRows, error: likesErr } = await supabase
+        .from('blog_likes')
+        .select('blog_id')
+        .eq('user_id', user.id);
+      if (likesErr) throw likesErr;
+      const ids = (likeRows || []).map((r: any) => r.blog_id);
+      if (!ids.length) { setLikedBlogs([]); return; }
+      const { data, error } = await supabase
+        .from('blogs')
+        .select(`*, profiles:author_id ( display_name, avatar_url )`)
+        .in('id', ids)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      // mark liked flag for UI consistency
+      const set = new Set(ids);
+      setLikedBlogs(((data as Blog[]) || []).map(b => ({ ...b, is_liked: set.has(b.id) })));
+    } catch (error: any) {
+      toast({ title: 'Error loading liked blogs', description: error.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchLiked(); }, []);
+
+  return { likedBlogs, loading, fetchLiked };
+};
+
+export const useSavedBlogs = () => {
+  const [savedBlogs, setSavedBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchSaved = async () => {
+    try {
+      setLoading(true);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) { setSavedBlogs([]); return; }
+      const { data: savedRows, error: savedErr } = await (supabase as any)
+        .from('saved_blogs')
+        .select('blog_id')
+        .eq('user_id', user.id);
+      if (savedErr) throw savedErr;
+      const ids = (savedRows || []).map((r: any) => r.blog_id);
+      if (!ids.length) { setSavedBlogs([]); return; }
+      const { data, error } = await supabase
+        .from('blogs')
+        .select(`*, profiles:author_id ( display_name, avatar_url )`)
+        .in('id', ids)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setSavedBlogs((data as Blog[]) || []);
+    } catch (error: any) {
+      toast({ title: 'Error loading saved blogs', description: error.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchSaved(); }, []);
+
+  return { savedBlogs, loading, fetchSaved };
 };
 
 export const useAllBlogs = () => {

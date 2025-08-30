@@ -44,16 +44,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      } catch (err) {
+        setSession(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -68,23 +75,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (user) {
       const fetchProfile = async () => {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) {
-          toast({
-            title: "Error fetching profile",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          if (error) throw error;
           setProfile(data as Profile);
+        } catch (error: any) {
+          toast({ title: "Error fetching profile", description: error.message, variant: "destructive" });
         }
       };
-
       fetchProfile();
     }
   }, [user, toast]);
