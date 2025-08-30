@@ -131,11 +131,13 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
       });
       return;
     }
-    setIsLiked(!isLiked);
+    const nextLiked = !isLiked;
+    setIsLiked(nextLiked);
     if (blog) {
       setBlog({
         ...blog,
-        likes_count: blog.likes_count + (isLiked ? -1 : 1)
+        likes_count: blog.likes_count + (nextLiked ? 1 : -1),
+        is_liked: nextLiked,
       });
       await likeBlog(blog.id);
     }
