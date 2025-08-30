@@ -27,6 +27,7 @@ const BlogPost = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const { allBlogs, likeBlog } = useBlogs();
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
