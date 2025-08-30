@@ -321,7 +321,7 @@ export const useBlogs = () => {
       }
       const { error } = await supabase
         .from('blogs')
-        .update({ featured })
+        .update({ featured } as any)
         .eq('id', blogId);
       if (error) throw error;
       const updateList = (list: Blog[]) => list.map(b => b.id === blogId ? { ...b, featured } : b);
