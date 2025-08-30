@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Clock, Star } from "lucide-react";
 import { useBlogs } from "@/hooks/useBlogs";
 import { useState } from "react";
+import { extractFirstImageUrl } from "@/lib/utils";
 
 const Index = () => {
   const { blogs, trendingBlogs, loading, likeBlog, searchBlogs, clearSearch, searchQuery } = useBlogs();
@@ -21,6 +22,8 @@ const Index = () => {
     clearSearch();
     setTimeout(() => setIsSearching(false), 300);
   };
+
+  const getCardImage = (b: any) => b.featured_image_url || extractFirstImageUrl(b.content) || "/placeholder.svg";
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,8 +78,8 @@ const Index = () => {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {blogs.slice(0, 6).map((blog) => (
-                  <BlogCard 
-                    key={blog.id} 
+                  <BlogCard
+                    key={blog.id}
                     blog={{
                       id: blog.id,
                       title: blog.title,
@@ -85,7 +88,7 @@ const Index = () => {
                       date: new Date(blog.created_at).toLocaleDateString(),
                       readTime: '5 min read',
                       likes: blog.likes_count,
-                      image: blog.featured_image_url || '/placeholder.svg',
+                      image: getCardImage(blog),
                       featured: false,
                       tags: blog.tags || [],
                       liked: !!blog.is_liked
@@ -119,7 +122,7 @@ const Index = () => {
                         date: new Date(blog.created_at).toLocaleDateString(),
                         readTime: '5 min read',
                         likes: blog.likes_count,
-                        image: blog.featured_image_url || '/placeholder.svg',
+                        image: getCardImage(blog),
                         featured: false,
                         tags: blog.tags || [],
                         liked: !!blog.is_liked
@@ -148,8 +151,8 @@ const Index = () => {
               return (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {featured.slice(0, 6).map((blog) => (
-                    <BlogCard 
-                      key={blog.id} 
+                    <BlogCard
+                      key={blog.id}
                       blog={{
                         id: blog.id,
                         title: blog.title,
@@ -158,7 +161,7 @@ const Index = () => {
                         date: new Date(blog.created_at).toLocaleDateString(),
                         readTime: '5 min read',
                         likes: blog.likes_count,
-                        image: blog.featured_image_url || '/placeholder.svg',
+                        image: getCardImage(blog),
                         featured: true,
                         tags: blog.tags || [],
                         liked: !!blog.is_liked
