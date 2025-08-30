@@ -21,7 +21,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminBlogs } from "@/hooks/useBlogs";
 import { useAnalytics } from "@/hooks/useAnalytics";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AllBlogs from "@/components/AllBlogs";
 
 const AdminDashboard = () => {
@@ -29,12 +29,22 @@ const AdminDashboard = () => {
   const { pendingBlogs, loading, updateBlogStatus, deleteBlog } = useAdminBlogs();
   const { platformAnalytics } = useAnalytics();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [tab, setTab] = useState<'analytics' | 'pending' | 'all'>('analytics');
 
   useEffect(() => {
     if (!user || profile?.role !== 'admin') {
       navigate('/');
     }
   }, [user, profile, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    if (section === 'pending' || section === 'all' || section === 'analytics') {
+      setTab(section as any);
+    }
+  }, [location.search]);
 
   if (!profile || profile.role !== 'admin') {
     return <div>Access denied</div>;
@@ -115,7 +125,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Content Management */}
-        <Tabs defaultValue="analytics" className="space-y-6">
+        <Tabs value={tab} onValueChange={(v:any)=>setTab(v)} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
