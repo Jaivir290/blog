@@ -2,9 +2,12 @@ import { Button } from "@/components/ui/button";
 import { PenTool, TrendingUp, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const HeroSection = () => {
   const { user } = useAuth();
+  const [open, setOpen] = useState(false);
 
   return (
     <section className="relative min-h-[70vh] flex items-center justify-center bg-gradient-hero overflow-hidden">
@@ -29,7 +32,7 @@ const HeroSection = () => {
           
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link to={user ? "/write" : "/auth"}>
+            <Link to="/write" onClick={(e) => { if (!user) { e.preventDefault(); setOpen(true); } }}>
               <Button
                 size="lg"
                 className="bg-gradient-primary hover:opacity-90 transition-all duration-300 transform hover:scale-105 shadow-medium text-lg px-8 py-6"
@@ -86,6 +89,22 @@ const HeroSection = () => {
       <div className="absolute top-20 left-10 w-20 h-20 bg-primary/10 rounded-full blur-xl animate-pulse"></div>
       <div className="absolute bottom-20 right-10 w-32 h-32 bg-accent/10 rounded-full blur-xl animate-pulse delay-1000"></div>
       <div className="absolute top-1/2 right-20 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-pulse delay-500"></div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sign in required</DialogTitle>
+            <DialogDescription>
+              Sign in to start writing and share your knowledge.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-end">
+            <Link to="/auth">
+              <Button>Sign In</Button>
+            </Link>
+            <Button variant="outline" onClick={() => setOpen(false)}>Maybe later</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
