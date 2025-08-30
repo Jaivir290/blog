@@ -36,14 +36,54 @@ export const useComments = (blogId: string) => {
 
       if (error) throw error;
 
-      const list: Comment[] = (data as any[]).map((c) => ({
+      const base = (data as any[]) || [];
+
+      // Build a list of all comment IDs (including replies)
+      const topIds = base.map((c) => c.id);
+      const replyIds = base.flatMap((c) => (c.replies || []).map((r: any) => r.id));
+      const allIds: string[] = [...new Set([...topIds, ...replyIds])];
+
+      // Default maps when there are no comments
+      let likeCounts = new Map<string, number>();
+      let likedByUser = new Set<string>();
+
+      if (allIds.length > 0) {
+        const { data: likeRows, error: likeErr } = await supabase
+          .from('comment_likes')
+          .select('comment_id, user_id')
+          .in('comment_id', allIds);
+        if (likeErr) throw likeErr;
+
+        likeCounts = new Map<string, number>();
+        for (const row of likeRows || []) {
+          likeCounts.set(row.comment_id, (likeCounts.get(row.comment_id) || 0) + 1);
+        }
+
+        const currentUser = user;
+        if (currentUser) {
+          likedByUser = new Set(
+            (likeRows || [])
+              .filter((r) => r.user_id === currentUser.id)
+              .map((r) => r.comment_id)
+          );
+        }
+      }
+
+      const withLikes: Comment[] = base.map((c: any) => ({
         ...c,
-        likes_count: c.likes_count || 0,
-        is_liked: false,
+        likes_count: likeCounts.get(c.id) || 0,
+        is_liked: likedByUser.has(c.id),
+        replies: (c.replies || []).map((r: any) => ({
+          ...r,
+          likes_count: likeCounts.get(r.id) || 0,
+          is_liked: likedByUser.has(r.id),
+        })),
       }));
 
-      setComments(list);
-      setCommentCount(list.length + list.reduce((acc, c) => acc + (c.replies?.length || 0), 0));
+      setComments(withLikes);
+      setCommentCount(
+        withLikes.length + withLikes.reduce((acc, c) => acc + (c.replies?.length || 0), 0)
+      );
     } catch (error: any) {
       toast({
         title: 'Error loading comments',
@@ -125,20 +165,67 @@ export const useComments = (blogId: string) => {
       return;
     }
 
+    // Determine current like state
+    const findLikeState = () => {
+      for (const c of comments) {
+        if (c.id === commentId) return !!c.is_liked;
+        for (const r of c.replies || []) {
+          if (r.id === commentId) return !!r.is_liked;
+        }
+      }
+      return false;
+    };
+
+    const currentlyLiked = findLikeState();
+    const delta = currentlyLiked ? -1 : 1;
+
+    // Optimistic UI update
+    setComments((prev) =>
+      prev.map((c) => {
+        if (c.id === commentId) {
+          return { ...c, is_liked: !currentlyLiked, likes_count: (c.likes_count || 0) + delta };
+        }
+        if (c.replies) {
+          return {
+            ...c,
+            replies: c.replies.map((r) =>
+              r.id === commentId
+                ? { ...r, is_liked: !currentlyLiked, likes_count: (r.likes_count || 0) + delta }
+                : r
+            ),
+          };
+        }
+        return c;
+      })
+    );
+
     try {
-      // No persistence layer for comment likes in schema; optimistic UI only
+      if (currentlyLiked) {
+        const { error } = await supabase
+          .from('comment_likes')
+          .delete()
+          .eq('comment_id', commentId)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('comment_likes')
+          .insert({ comment_id: commentId, user_id: user.id });
+        if (error) throw error;
+      }
+    } catch (error: any) {
+      // Revert on error
       setComments((prev) =>
         prev.map((c) => {
           if (c.id === commentId) {
-            const liked = c.is_liked;
-            return { ...c, is_liked: !liked, likes_count: (c.likes_count || 0) + (liked ? -1 : 1) };
+            return { ...c, is_liked: currentlyLiked, likes_count: (c.likes_count || 0) - delta };
           }
           if (c.replies) {
             return {
               ...c,
               replies: c.replies.map((r) =>
                 r.id === commentId
-                  ? { ...r, is_liked: !r.is_liked, likes_count: (r.likes_count || 0) + (r.is_liked ? -1 : 1) }
+                  ? { ...r, is_liked: currentlyLiked, likes_count: (r.likes_count || 0) - delta }
                   : r
               ),
             };
@@ -146,7 +233,6 @@ export const useComments = (blogId: string) => {
           return c;
         })
       );
-    } catch (error: any) {
       toast({ title: 'Failed to update like', description: error.message, variant: 'destructive' });
     }
   };
