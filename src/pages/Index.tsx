@@ -1,10 +1,12 @@
 import Header from "@/components/Header";
+import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import BlogCard from "@/components/BlogCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, Clock, Star } from "lucide-react";
+import { TrendingUp, Clock, Star, Bookmark } from "lucide-react";
 import { useBlogs } from "@/hooks/useBlogs";
 import { useState } from "react";
+import { extractFirstImageUrl } from "@/lib/utils";
 
 const Index = () => {
   const { blogs, trendingBlogs, loading, likeBlog, searchBlogs, clearSearch, searchQuery } = useBlogs();
@@ -13,7 +15,7 @@ const Index = () => {
   const handleSearch = (query: string) => {
     setIsSearching(true);
     searchBlogs(query);
-    setTimeout(() => setIsSearching(false), 300); // Small delay for better UX
+    setTimeout(() => setIsSearching(false), 300);
   };
 
   const handleClearSearch = () => {
@@ -21,6 +23,8 @@ const Index = () => {
     clearSearch();
     setTimeout(() => setIsSearching(false), 300);
   };
+
+  const getCardImage = (b: any) => b.featured_image_url || extractFirstImageUrl(b.content) || "/placeholder.svg";
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,7 +51,7 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="latest" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
             <TabsTrigger value="latest" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Latest
@@ -60,6 +64,10 @@ const Index = () => {
               <Star className="h-4 w-4" />
               Featured
             </TabsTrigger>
+            <TabsTrigger value="saved" className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4" />
+              Saved
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="latest" className="space-y-6">
@@ -67,16 +75,16 @@ const Index = () => {
               <div className="text-center py-8">
                 {isSearching ? 'Searching...' : 'Loading blogs...'}
               </div>
-            ) : blogs.length === 0 && searchQuery ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No articles found matching your search.</p>
-                <p className="mt-2">Try different keywords or check your spelling.</p>
+            ) : blogs.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>{searchQuery ? 'No articles found matching your search.' : 'No articles yet.'}</p>
+                {searchQuery && <p className="mt-2">Try different keywords or check your spelling.</p>}
               </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {blogs.slice(0, 6).map((blog) => (
-                  <BlogCard 
-                    key={blog.id} 
+                  <BlogCard
+                    key={blog.id}
                     blog={{
                       id: blog.id,
                       title: blog.title,
@@ -85,9 +93,10 @@ const Index = () => {
                       date: new Date(blog.created_at).toLocaleDateString(),
                       readTime: '5 min read',
                       likes: blog.likes_count,
-                      image: blog.featured_image_url || '/placeholder.svg',
-                      featured: false,
-                      tags: blog.tags || []
+                      image: getCardImage(blog),
+                      featured: !!blog.featured,
+                      tags: blog.tags || [],
+                      liked: !!blog.is_liked
                     }}
                     onLike={() => likeBlog(blog.id)}
                   />
@@ -118,9 +127,10 @@ const Index = () => {
                         date: new Date(blog.created_at).toLocaleDateString(),
                         readTime: '5 min read',
                         likes: blog.likes_count,
-                        image: blog.featured_image_url || '/placeholder.svg',
-                        featured: false,
-                        tags: blog.tags || []
+                        image: getCardImage(blog),
+                      featured: !!blog.featured,
+                      tags: blog.tags || [],
+                      liked: !!blog.is_liked
                       }}
                       onLike={() => likeBlog(blog.id)}
                     />
@@ -134,19 +144,20 @@ const Index = () => {
               <div className="text-center py-8">
                 {isSearching ? 'Searching...' : 'Loading blogs...'}
               </div>
-            ) : blogs.length === 0 && searchQuery ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No featured articles found matching your search.</p>
-                <p className="mt-2">Try different keywords or check your spelling.</p>
-              </div>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {blogs
-                  .filter((blog) => blog.views_count > 100)
-                  .slice(0, 6)
-                  .map((blog) => (
-                    <BlogCard 
-                      key={blog.id} 
+            ) : (() => {
+              const featured = blogs.filter((b) => !!b.featured);
+              if (featured.length === 0) {
+                return (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>No featured articles yet.</p>
+                  </div>
+                );
+              }
+              return (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {featured.slice(0, 6).map((blog) => (
+                    <BlogCard
+                      key={blog.id}
                       blog={{
                         id: blog.id,
                         title: blog.title,
@@ -155,15 +166,56 @@ const Index = () => {
                         date: new Date(blog.created_at).toLocaleDateString(),
                         readTime: '5 min read',
                         likes: blog.likes_count,
-                        image: blog.featured_image_url || '/placeholder.svg',
+                        image: getCardImage(blog),
                         featured: true,
-                        tags: blog.tags || []
+                        tags: blog.tags || [],
+                        liked: !!blog.is_liked
                       }}
                       onLike={() => likeBlog(blog.id)}
                     />
                   ))}
+                </div>
+              );
+            })()}
+          </TabsContent>
+          <TabsContent value="saved" className="space-y-6">
+            {loading || isSearching ? (
+              <div className="text-center py-8">
+                {isSearching ? 'Searching...' : 'Loading blogs...'}
               </div>
-            )}
+            ) : (() => {
+              const saved = blogs.filter((b) => !!b.is_saved);
+              if (saved.length === 0) {
+                return (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>No saved articles yet.</p>
+                  </div>
+                );
+              }
+              return (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {saved.slice(0, 6).map((blog) => (
+                    <BlogCard
+                      key={blog.id}
+                      blog={{
+                        id: blog.id,
+                        title: blog.title,
+                        excerpt: blog.excerpt || '',
+                        author: blog.profiles?.display_name || 'Anonymous',
+                        date: new Date(blog.created_at).toLocaleDateString(),
+                        readTime: '5 min read',
+                        likes: blog.likes_count,
+                        image: getCardImage(blog),
+                        featured: !!blog.featured,
+                        tags: blog.tags || [],
+                        liked: !!blog.is_liked
+                      }}
+                      onLike={() => likeBlog(blog.id)}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </div>

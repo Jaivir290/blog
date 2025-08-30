@@ -137,7 +137,7 @@ const ProfilePage = () => {
                         readTime: '5 min read',
                         likes: blog.likes_count,
                         image: blog.featured_image_url || '/placeholder.svg',
-                        featured: blog.status === 'approved',
+                        featured: !!blog.featured,
                         tags: blog.tags || []
                       }}
                     />

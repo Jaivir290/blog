@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import AuthDialog from "@/components/AuthDialog";
 
 interface CommentFormProps {
   blogId: string;
@@ -22,6 +23,7 @@ const CommentForm = ({
   const { user, profile } = useAuth();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openAuth, setOpenAuth] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,9 +50,10 @@ const CommentForm = ({
           <p className="text-muted-foreground mb-4">
             Sign in to share your thoughts and engage with the community.
           </p>
-          <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
+          <Button className="bg-gradient-primary hover:opacity-90 transition-opacity" onClick={() => setOpenAuth(true)}>
             Sign In to Comment
           </Button>
+          <AuthDialog open={openAuth} onOpenChange={setOpenAuth} />
         </CardContent>
       </Card>
     );

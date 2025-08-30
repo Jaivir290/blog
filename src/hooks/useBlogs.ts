@@ -20,6 +20,9 @@ export interface Blog {
     display_name: string;
     avatar_url?: string;
   };
+  featured?: boolean;
+  is_liked?: boolean;
+  is_saved?: boolean;
 }
 
 export const useBlogs = () => {
@@ -107,8 +110,22 @@ export const useBlogs = () => {
         setBlogs(sampleBlogs);
       } else {
         const blogData = (data as Blog[]) || [];
-        setAllBlogs(blogData);
-        setBlogs(blogData);
+        const currentUser = (await supabase.auth.getUser()).data.user;
+        if (currentUser && blogData.length) {
+          const ids = blogData.map(b => b.id);
+          const [{ data: likesRows }, { data: savedRows }] = await Promise.all([
+            supabase.from('blog_likes').select('blog_id').eq('user_id', currentUser.id).in('blog_id', ids),
+            (supabase as any).from('saved_blogs').select('blog_id').eq('user_id', currentUser.id).in('blog_id', ids),
+          ]);
+          const likedSet = new Set((likesRows || []).map(r => r.blog_id));
+          const savedSet = new Set((savedRows || []).map(r => r.blog_id));
+          const withFlags = blogData.map(b => ({ ...b, is_liked: likedSet.has(b.id), is_saved: savedSet.has(b.id) }));
+          setAllBlogs(withFlags);
+          setBlogs(withFlags);
+        } else {
+          setAllBlogs(blogData);
+          setBlogs(blogData);
+        }
       }
     } catch (error: any) {
       // If there's an error, show sample blogs as fallback
@@ -172,6 +189,7 @@ export const useBlogs = () => {
     content: string;
     excerpt?: string;
     tags?: string[];
+    featured_image_url?: string | null;
   }) => {
     try {
       if (!user) throw new Error("User not authenticated");
@@ -212,39 +230,107 @@ export const useBlogs = () => {
 
   const likeBlog = async (blogId: string) => {
     try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
+      const userRes = await supabase.auth.getUser();
+      const user = userRes.data.user;
+      if (!user) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to like articles.",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      // Check if already liked
-      const { data: existingLike } = await supabase
-        .from('blog_likes')
-        .select('id')
-        .eq('blog_id', blogId)
-        .eq('user_id', user.id)
-        .single();
+      const getLiked = (list: Blog[]) => list.find(b => b.id === blogId)?.is_liked ?? false;
+      const currentlyLiked = getLiked(allBlogs) || getLiked(blogs) || getLiked(trendingBlogs);
+      const delta = currentlyLiked ? -1 : 1;
+      const updateList = (list: Blog[]) => list.map(b => b.id === blogId ? { ...b, likes_count: (b.likes_count || 0) + delta, is_liked: !currentlyLiked } : b);
 
-      if (existingLike) {
-        // Unlike
-        await supabase
+      setAllBlogs(updateList);
+      setBlogs(updateList);
+      setTrendingBlogs(updateList);
+
+      if (currentlyLiked) {
+        const { error } = await supabase
           .from('blog_likes')
           .delete()
           .eq('blog_id', blogId)
           .eq('user_id', user.id);
+        if (error) throw error;
       } else {
-        // Like
-        await supabase
+        const { error } = await supabase
           .from('blog_likes')
           .insert({ blog_id: blogId, user_id: user.id });
+        if (error) throw error;
       }
-
-      // Refresh blogs
-      fetchBlogs();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+      fetchBlogs();
+    }
+  };
+
+  const toggleSaveBlog = async (blogId: string) => {
+    try {
+      const userRes = await supabase.auth.getUser();
+      const user = userRes.data.user;
+      if (!user) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to save articles.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const getSaved = (list: Blog[]) => list.find(b => b.id === blogId)?.is_saved ?? false;
+      const currentlySaved = getSaved(allBlogs) || getSaved(blogs);
+
+      const updateList = (list: Blog[]) => list.map(b => b.id === blogId ? { ...b, is_saved: !currentlySaved } : b);
+      setAllBlogs(updateList);
+      setBlogs(updateList);
+      setTrendingBlogs(updateList);
+
+      if (currentlySaved) {
+        const { error } = await (supabase as any)
+          .from('saved_blogs')
+          .delete()
+          .eq('blog_id', blogId)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any)
+          .from('saved_blogs')
+          .insert({ blog_id: blogId, user_id: user.id });
+        if (error) throw error;
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      fetchBlogs();
+    }
+  };
+
+  const setFeatured = async (blogId: string, featured: boolean) => {
+    try {
+      if (profile?.role !== 'admin') {
+        toast({ title: "Permission denied", description: "Only admins can feature articles.", variant: "destructive" });
+        return;
+      }
+      const { error } = await supabase
+        .from('blogs')
+        .update({ featured } as any)
+        .eq('id', blogId);
+      if (error) throw error;
+      const updateList = (list: Blog[]) => list.map(b => b.id === blogId ? { ...b, featured } : b);
+      setAllBlogs(updateList);
+      setBlogs(updateList);
+      setTrendingBlogs(updateList);
+      toast({ title: featured ? "Article featured" : "Article unfeatured" });
+    } catch (error: any) {
+      toast({ title: "Error updating featured", description: error.message, variant: "destructive" });
     }
   };
 
@@ -271,7 +357,21 @@ export const useBlogs = () => {
 
       if (error) throw error;
 
-      setTrendingBlogs((data as Blog[]) || []);
+      {
+        let list = (data as Blog[]) || [];
+        const currentUser = (await supabase.auth.getUser()).data.user;
+        if (currentUser && list.length) {
+          const ids = list.map(b => b.id);
+          const { data: likesRows } = await supabase
+            .from('blog_likes')
+            .select('blog_id')
+            .eq('user_id', currentUser.id)
+            .in('blog_id', ids);
+        const likedSet = new Set((likesRows || []).map(r => r.blog_id));
+        list = list.map(b => ({ ...b, is_liked: likedSet.has(b.id) }));
+        }
+        setTrendingBlogs(list);
+      }
     } catch (error: any) {
       toast({
         title: "Error loading trending blogs",
@@ -292,6 +392,8 @@ export const useBlogs = () => {
     fetchBlogs,
     createBlog,
     likeBlog,
+    toggleSaveBlog,
+    setFeatured,
     searchBlogs,
     clearSearch
   };

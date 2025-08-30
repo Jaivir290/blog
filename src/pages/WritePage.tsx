@@ -11,7 +11,9 @@ import { Eye, Save, Send, Plus, X, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBlogs } from "@/hooks/useBlogs";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader as DialogHdr, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const WritePage = () => {
   const [title, setTitle] = useState("");
@@ -20,16 +22,19 @@ const WritePage = () => {
   const [newTag, setNewTag] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageAlt, setImageAlt] = useState("");
+  const [setAsCover, setSetAsCover] = useState(false);
+  const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
   const { createBlog } = useBlogs();
-  const navigate = useNavigate();
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-    }
-  }, [user, navigate]);
+    setShowAuthDialog(!user);
+  }, [user]);
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim()) && tags.length < 5) {
@@ -81,8 +86,9 @@ const WritePage = () => {
       setContent("");
       setExcerpt("");
       setTags([]);
+      setFeaturedImageUrl("");
     }
-    
+
     setIsSubmitting(false);
   };
 
@@ -100,13 +106,13 @@ const WritePage = () => {
           </div>
           
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleSaveDraft}>
+            <Button variant="outline" onClick={handleSaveDraft} disabled={!user}>
               <Save className="h-4 w-4 mr-2" />
               Save Draft
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={!user || isSubmitting}
               className="bg-gradient-primary hover:opacity-90 transition-opacity"
             >
               <Send className="h-4 w-4 mr-2" />
@@ -128,8 +134,16 @@ const WritePage = () => {
                       Preview
                     </TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="write" className="space-y-4">
+                    {featuredImageUrl && (
+                      <div className="rounded-lg overflow-hidden border border-border/60">
+                        <img src={featuredImageUrl} alt="Featured" className="w-full h-48 object-cover" />
+                        <div className="p-2 flex justify-end">
+                          <Button variant="outline" size="sm" onClick={() => setFeaturedImageUrl("")}>Remove cover</Button>
+                        </div>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="title">Article Title</Label>
                       <Input
@@ -165,7 +179,7 @@ const WritePage = () => {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => setShowImageDialog(true)}>
                         <Image className="h-4 w-4 mr-2" />
                         Add Image
                       </Button>
@@ -269,6 +283,70 @@ const WritePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Image Dialog */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHdr>
+            <DialogTitle>Add image</DialogTitle>
+            <DialogDescription>Paste an image URL to insert and optionally set as cover.</DialogDescription>
+          </DialogHdr>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="img-url">Image URL</Label>
+              <Input id="img-url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="img-alt">Alt text</Label>
+              <Input id="img-alt" value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Describe the image" />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="cover" checked={setAsCover} onCheckedChange={(v) => setSetAsCover(!!v)} />
+              <Label htmlFor="cover">Set as cover image</Label>
+            </div>
+            {imageUrl && (
+              <div className="rounded-md overflow-hidden border border-border/60">
+                <img src={imageUrl} alt={imageAlt || 'preview'} className="w-full h-40 object-cover" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImageDialog(false)}>Cancel</Button>
+            <Button onClick={() => {
+              const valid = /^https?:\/\//i.test(imageUrl);
+              if (!valid) {
+                toast({ title: "Invalid URL", description: "Enter a valid image URL.", variant: "destructive" });
+                return;
+              }
+              const alt = imageAlt.trim() || 'image';
+              const toInsert = `\n![${alt}](${imageUrl})\n`;
+              setContent((prev) => prev + toInsert);
+              if (setAsCover) setFeaturedImageUrl(imageUrl);
+              setImageUrl("");
+              setImageAlt("");
+              setSetAsCover(false);
+              setShowImageDialog(false);
+            }}>Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHdr>
+            <DialogTitle>Sign in required</DialogTitle>
+            <DialogDescription>
+              You need to be signed in to write and submit an article.
+            </DialogDescription>
+          </DialogHdr>
+          <DialogFooter className="sm:justify-end">
+            <Link to="/auth">
+              <Button>Sign In</Button>
+            </Link>
+            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>Maybe later</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

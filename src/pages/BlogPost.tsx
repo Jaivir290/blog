@@ -21,12 +21,18 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { useBlogs } from "@/hooks/useBlogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { extractFirstImageUrl } from "@/lib/utils";
 
 const BlogPost = () => {
   const { blogId } = useParams<{ blogId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { allBlogs, likeBlog } = useBlogs();
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  const { allBlogs, likeBlog, toggleSaveBlog, setFeatured, loading: blogsLoading } = useBlogs();
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
@@ -43,8 +49,11 @@ const BlogPost = () => {
     
     if (foundBlog) {
       setBlog(foundBlog);
-    } else {
-      // Create a sample blog for demo purposes
+      setIsLiked(!!foundBlog.is_liked);
+      setIsBookmarked(!!foundBlog.is_saved);
+    } else if (!blogsLoading) {
+      setBlog(null);
+      /* sample removed
       setBlog({
         id: blogId,
         title: 'Understanding Modern Web Development: A Comprehensive Guide',
@@ -111,27 +120,43 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
           avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane',
           bio: 'Senior Full-Stack Developer with 8+ years of experience building scalable web applications.'
         }
-      });
+      }); */
     }
-    
-    setLoading(false);
-  }, [blogId, allBlogs, navigate]);
+
+    setLoading(foundBlog ? false : blogsLoading);
+  }, [blogId, allBlogs, blogsLoading, navigate]);
 
   const handleLike = async () => {
-    if (!user) return;
-    setIsLiked(!isLiked);
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to like this article.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const nextLiked = !isLiked;
+    setIsLiked(nextLiked);
     if (blog) {
       setBlog({
         ...blog,
-        likes_count: blog.likes_count + (isLiked ? -1 : 1)
+        likes_count: blog.likes_count + (nextLiked ? 1 : -1),
+        is_liked: nextLiked,
       });
       await likeBlog(blog.id);
     }
   };
 
-  const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-    // Implement bookmark functionality
+  const handleBookmark = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to save this article.", variant: "destructive" });
+      return;
+    }
+    const next = !isBookmarked;
+    setIsBookmarked(next);
+    if (blog) {
+      await toggleSaveBlog(blog.id);
+    }
   };
 
   const handleShare = async () => {
@@ -155,11 +180,16 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-3/4"></div>
-            <div className="h-4 bg-muted rounded w-1/2"></div>
-            <div className="h-64 bg-muted rounded"></div>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="space-y-6">
+            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-64 w-full rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-10/12" />
+            </div>
           </div>
         </div>
       </div>
@@ -189,22 +219,29 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
         <Button 
           variant="ghost" 
           className="mb-6 -ml-2" 
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            const canGoBack = typeof window !== 'undefined' && window.history.state && window.history.state.idx > 0;
+            if (canGoBack) {
+              navigate(-1);
+            } else {
+              navigate('/');
+            }
+          }}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
 
         {/* Featured Image */}
-        {blog.featured_image_url && (
-          <div className="aspect-video mb-8 rounded-lg overflow-hidden">
-            <img
-              src={blog.featured_image_url}
-              alt={blog.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+        {(() => {
+          const headerImg = blog.featured_image_url || extractFirstImageUrl(blog.content);
+          if (!headerImg) return null;
+          return (
+            <div className="aspect-video mb-8 rounded-lg overflow-hidden">
+              <img src={headerImg} alt={blog.title} className="w-full h-full object-cover" />
+            </div>
+          );
+        })()}
 
         {/* Article Header */}
         <header className="mb-8">
@@ -274,7 +311,21 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
               <Button variant="outline" size="sm" onClick={handleBookmark}>
                 <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
               </Button>
-              
+
+              {profile?.role === 'admin' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const next = !blog?.featured;
+                    setBlog((b: any) => (b ? { ...b, featured: next } : b));
+                    if (blog) await setFeatured(blog.id, next);
+                  }}
+                >
+                  {blog?.featured ? 'Unfeature' : 'Feature'}
+                </Button>
+              )}
+
               <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="h-4 w-4" />
               </Button>
@@ -286,9 +337,15 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
 
         {/* Article Content */}
         <div className="prose prose-slate dark:prose-invert max-w-none mb-12">
-          <div className="whitespace-pre-wrap leading-relaxed text-foreground">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}
+            components={{
+              img: ({ node, ...props }) => (
+                <img {...props} className="rounded-md border border-border/60" />
+              )
+            }}
+          >
             {blog.content}
-          </div>
+          </ReactMarkdown>
         </div>
 
         {/* Author Bio */}
