@@ -1,15 +1,9 @@
 import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import BlogCard from "@/components/BlogCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import BlogCard from "@/components/BlogCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Clock, Star, Bookmark } from "lucide-react";
-import { useBlogs } from "@/hooks/useBlogs";
-import { useState } from "react";
-import { extractFirstImageUrl } from "@/lib/utils";
 import { useBlogs } from "@/hooks/useBlogs";
 import { useState } from "react";
 import { extractFirstImageUrl } from "@/lib/utils";
