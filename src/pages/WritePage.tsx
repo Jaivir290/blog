@@ -133,8 +133,16 @@ const WritePage = () => {
                       Preview
                     </TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="write" className="space-y-4">
+                    {featuredImageUrl && (
+                      <div className="rounded-lg overflow-hidden border border-border/60">
+                        <img src={featuredImageUrl} alt="Featured" className="w-full h-48 object-cover" />
+                        <div className="p-2 flex justify-end">
+                          <Button variant="outline" size="sm" onClick={() => setFeaturedImageUrl("")}>Remove cover</Button>
+                        </div>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="title">Article Title</Label>
                       <Input
