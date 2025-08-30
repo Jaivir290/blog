@@ -2,7 +2,14 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import BlogCard from "@/components/BlogCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, Clock, Star } from "lucide-react";
+import Header from "@/components/Header";
+import HeroSection from "@/components/HeroSection";
+import BlogCard from "@/components/BlogCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrendingUp, Clock, Star, Bookmark } from "lucide-react";
+import { useBlogs } from "@/hooks/useBlogs";
+import { useState } from "react";
+import { extractFirstImageUrl } from "@/lib/utils";
 import { useBlogs } from "@/hooks/useBlogs";
 import { useState } from "react";
 import { extractFirstImageUrl } from "@/lib/utils";
@@ -50,7 +57,7 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="latest" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
             <TabsTrigger value="latest" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Latest
@@ -62,6 +69,10 @@ const Index = () => {
             <TabsTrigger value="featured" className="flex items-center gap-2">
               <Star className="h-4 w-4" />
               Featured
+            </TabsTrigger>
+            <TabsTrigger value="saved" className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4" />
+              Saved
             </TabsTrigger>
           </TabsList>
 
@@ -89,7 +100,7 @@ const Index = () => {
                       readTime: '5 min read',
                       likes: blog.likes_count,
                       image: getCardImage(blog),
-                      featured: false,
+                      featured: !!blog.featured,
                       tags: blog.tags || [],
                       liked: !!blog.is_liked
                     }}
@@ -123,9 +134,9 @@ const Index = () => {
                         readTime: '5 min read',
                         likes: blog.likes_count,
                         image: getCardImage(blog),
-                        featured: false,
-                        tags: blog.tags || [],
-                        liked: !!blog.is_liked
+                      featured: !!blog.featured,
+                      tags: blog.tags || [],
+                      liked: !!blog.is_liked
                       }}
                       onLike={() => likeBlog(blog.id)}
                     />
@@ -140,7 +151,7 @@ const Index = () => {
                 {isSearching ? 'Searching...' : 'Loading blogs...'}
               </div>
             ) : (() => {
-              const featured = blogs.filter((b) => (b.views_count || 0) >= 150 || (b.likes_count || 0) >= 40);
+              const featured = blogs.filter((b) => !!b.featured);
               if (featured.length === 0) {
                 return (
                   <div className="text-center py-12 text-muted-foreground">
@@ -163,6 +174,45 @@ const Index = () => {
                         likes: blog.likes_count,
                         image: getCardImage(blog),
                         featured: true,
+                        tags: blog.tags || [],
+                        liked: !!blog.is_liked
+                      }}
+                      onLike={() => likeBlog(blog.id)}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
+          </TabsContent>
+          <TabsContent value="saved" className="space-y-6">
+            {loading || isSearching ? (
+              <div className="text-center py-8">
+                {isSearching ? 'Searching...' : 'Loading blogs...'}
+              </div>
+            ) : (() => {
+              const saved = blogs.filter((b) => !!b.is_saved);
+              if (saved.length === 0) {
+                return (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>No saved articles yet.</p>
+                  </div>
+                );
+              }
+              return (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {saved.slice(0, 6).map((blog) => (
+                    <BlogCard
+                      key={blog.id}
+                      blog={{
+                        id: blog.id,
+                        title: blog.title,
+                        excerpt: blog.excerpt || '',
+                        author: blog.profiles?.display_name || 'Anonymous',
+                        date: new Date(blog.created_at).toLocaleDateString(),
+                        readTime: '5 min read',
+                        likes: blog.likes_count,
+                        image: getCardImage(blog),
+                        featured: !!blog.featured,
                         tags: blog.tags || [],
                         liked: !!blog.is_liked
                       }}
