@@ -213,9 +213,15 @@ export const useBlogs = () => {
   const likeBlog = async (blogId: string) => {
     try {
       const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
+      if (!user) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to like articles.",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      // Check if already liked
       const { data: existingLike } = await supabase
         .from('blog_likes')
         .select('id')
@@ -224,20 +230,19 @@ export const useBlogs = () => {
         .single();
 
       if (existingLike) {
-        // Unlike
         await supabase
           .from('blog_likes')
           .delete()
           .eq('blog_id', blogId)
           .eq('user_id', user.id);
+        toast({ title: "Removed like" });
       } else {
-        // Like
         await supabase
           .from('blog_likes')
           .insert({ blog_id: blogId, user_id: user.id });
+        toast({ title: "Liked" });
       }
 
-      // Refresh blogs
       fetchBlogs();
     } catch (error: any) {
       toast({
