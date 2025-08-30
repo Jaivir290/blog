@@ -116,6 +116,22 @@ All colors MUST be HSL.
   }
 }
 
+/* Data-theme palettes (hex converted to HSL) */
+:root[data-theme="light"] {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --primary: 2 39% 27%; /* #602c2a */
+  --secondary: 164 39% 69%; /* #91cfbf */
+  --accent: 221 39% 50%; /* #4e6db1 */
+}
+:root[data-theme="dark"] {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --primary: 2 39% 73%; /* #d5a2a0 */
+  --secondary: 165 62% 31%; /* #306d5e */
+  --accent: 221 39% 50%; /* #4e6eb1 approx */
+}
+
 @layer base {
   * {
     @apply border-border;
