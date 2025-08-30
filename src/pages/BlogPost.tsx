@@ -120,7 +120,14 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
   }, [blogId, allBlogs, navigate]);
 
   const handleLike = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to like this article.",
+        variant: "destructive"
+      });
+      return;
+    }
     setIsLiked(!isLiked);
     if (blog) {
       setBlog({
