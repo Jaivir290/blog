@@ -22,6 +22,11 @@ const WritePage = () => {
   const [newTag, setNewTag] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageAlt, setImageAlt] = useState("");
+  const [setAsCover, setSetAsCover] = useState(false);
+  const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
   const { createBlog } = useBlogs();
