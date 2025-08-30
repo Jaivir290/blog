@@ -31,7 +31,7 @@ const WritePage = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { createBlog } = useBlogs();
+  const { createBlog, createDraft } = useBlogs();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   useEffect(() => {
