@@ -23,6 +23,9 @@ import { useBlogs } from "@/hooks/useBlogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { extractFirstImageUrl } from "@/lib/utils";
 
 const BlogPost = () => {
   const { blogId } = useParams<{ blogId: string }>();
@@ -215,15 +218,15 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
         </Button>
 
         {/* Featured Image */}
-        {blog.featured_image_url && (
-          <div className="aspect-video mb-8 rounded-lg overflow-hidden">
-            <img
-              src={blog.featured_image_url}
-              alt={blog.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+        {(() => {
+          const headerImg = blog.featured_image_url || extractFirstImageUrl(blog.content);
+          if (!headerImg) return null;
+          return (
+            <div className="aspect-video mb-8 rounded-lg overflow-hidden">
+              <img src={headerImg} alt={blog.title} className="w-full h-full object-cover" />
+            </div>
+          );
+        })()}
 
         {/* Article Header */}
         <header className="mb-8">
@@ -305,9 +308,15 @@ Whether you're just starting out or are a seasoned developer, continuous learnin
 
         {/* Article Content */}
         <div className="prose prose-slate dark:prose-invert max-w-none mb-12">
-          <div className="whitespace-pre-wrap leading-relaxed text-foreground">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}
+            components={{
+              img: ({ node, ...props }) => (
+                <img {...props} className="rounded-md border border-border/60" />
+              )
+            }}
+          >
             {blog.content}
-          </div>
+          </ReactMarkdown>
         </div>
 
         {/* Author Bio */}
