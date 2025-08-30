@@ -170,7 +170,7 @@ const WritePage = () => {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => setShowImageDialog(true)}>
                         <Image className="h-4 w-4 mr-2" />
                         Add Image
                       </Button>
