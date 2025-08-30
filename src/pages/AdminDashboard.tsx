@@ -188,7 +188,10 @@ const AdminDashboard = () => {
                         <Button 
                           size="sm"
                           variant="destructive"
-                          onClick={() => updateBlogStatus(blog.id, 'rejected')}
+                          onClick={() => {
+                            const reason = window.prompt('Provide a rejection reason (optional):') || undefined;
+                            updateBlogStatus(blog.id, 'rejected', reason);
+                          }}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
                           Reject
