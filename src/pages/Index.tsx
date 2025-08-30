@@ -13,7 +13,7 @@ const Index = () => {
   const handleSearch = (query: string) => {
     setIsSearching(true);
     searchBlogs(query);
-    setTimeout(() => setIsSearching(false), 300); // Small delay for better UX
+    setTimeout(() => setIsSearching(false), 300);
   };
 
   const handleClearSearch = () => {
@@ -75,8 +75,8 @@ const Index = () => {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {blogs.slice(0, 6).map((blog) => (
-                  <BlogCard
-                    key={blog.id}
+                  <BlogCard 
+                    key={blog.id} 
                     blog={{
                       id: blog.id,
                       title: blog.title,
@@ -87,7 +87,8 @@ const Index = () => {
                       likes: blog.likes_count,
                       image: blog.featured_image_url || '/placeholder.svg',
                       featured: false,
-                      tags: blog.tags || []
+                      tags: blog.tags || [],
+                      liked: !!blog.is_liked
                     }}
                     onLike={() => likeBlog(blog.id)}
                   />
@@ -120,7 +121,8 @@ const Index = () => {
                         likes: blog.likes_count,
                         image: blog.featured_image_url || '/placeholder.svg',
                         featured: false,
-                        tags: blog.tags || []
+                        tags: blog.tags || [],
+                        liked: !!blog.is_liked
                       }}
                       onLike={() => likeBlog(blog.id)}
                     />
@@ -146,8 +148,8 @@ const Index = () => {
               return (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {featured.slice(0, 6).map((blog) => (
-                    <BlogCard
-                      key={blog.id}
+                    <BlogCard 
+                      key={blog.id} 
                       blog={{
                         id: blog.id,
                         title: blog.title,
@@ -158,7 +160,8 @@ const Index = () => {
                         likes: blog.likes_count,
                         image: blog.featured_image_url || '/placeholder.svg',
                         featured: true,
-                        tags: blog.tags || []
+                        tags: blog.tags || [],
+                        liked: !!blog.is_liked
                       }}
                       onLike={() => likeBlog(blog.id)}
                     />
