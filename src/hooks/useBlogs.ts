@@ -496,18 +496,31 @@ export const useAdminBlogs = () => {
 
   const updateBlogStatus = async (blogId: string, status: 'approved' | 'rejected' | 'hidden') => {
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('blogs')
         .update({ status })
-        .eq('id', blogId);
+        .eq('id', blogId)
+        .select('id,title,author_id')
+        .single();
 
       if (error) throw error;
-      
+
+      try {
+        if (updated?.author_id) {
+          const message = status === 'approved'
+            ? `Your article was approved: ${updated.title}`
+            : status === 'rejected'
+              ? `Your article was rejected: ${updated.title}`
+              : `Your article status changed to ${status}: ${updated.title}`;
+          await supabase.from('notifications').insert([{ user_id: (updated as any).author_id, message, is_read: false }]);
+        }
+      } catch (_) {}
+
       toast({
         title: "Blog Updated",
         description: `Blog has been ${status}.`,
       });
-      
+
       fetchPendingBlogs();
     } catch (error: any) {
       toast({
