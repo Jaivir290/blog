@@ -8,12 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, MapPin, Link as LinkIcon, Edit, Heart, BookOpen, Star } from "lucide-react";
 import BlogCard from "@/components/BlogCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserBlogs } from "@/hooks/useBlogs";
+import { useUserBlogs, useSavedBlogs, useBlogs } from "@/hooks/useBlogs";
 import { useNavigate } from "react-router-dom";
 
 const ProfilePage = () => {
   const { user, profile } = useAuth();
   const { userBlogs, loading } = useUserBlogs();
+  const { savedBlogs, loading: savedLoading } = useSavedBlogs();
+  const { likeBlog } = useBlogs();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -164,9 +166,35 @@ const ProfilePage = () => {
           </TabsContent>
           
           <TabsContent value="saved" className="space-y-6">
-            <div className="text-center py-8 text-muted-foreground">
-              Saved articles feature coming soon!
-            </div>
+            {savedLoading ? (
+              <div className="text-center py-8">Loading saved articles...</div>
+            ) : savedBlogs.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                {savedBlogs.map((blog) => (
+                  <BlogCard
+                    key={blog.id}
+                    blog={{
+                      id: blog.id,
+                      title: blog.title,
+                      excerpt: blog.excerpt || '',
+                      author: blog.profiles?.display_name || 'Anonymous',
+                      date: new Date(blog.created_at).toLocaleDateString(),
+                      readTime: '5 min read',
+                      likes: blog.likes_count,
+                      image: blog.featured_image_url || '/placeholder.svg',
+                      featured: !!blog.featured,
+                      tags: blog.tags || [],
+                      liked: !!blog.is_liked,
+                    }}
+                    onLike={() => likeBlog(blog.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                You haven't saved any articles yet.
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
