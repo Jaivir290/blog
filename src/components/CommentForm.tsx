@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 interface CommentFormProps {
   blogId: string;
@@ -48,11 +49,11 @@ const CommentForm = ({
           <p className="text-muted-foreground mb-4">
             Sign in to share your thoughts and engage with the community.
           </p>
-          <a href="/auth">
+          <Link to="/auth">
             <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
               Sign In to Comment
             </Button>
-          </a>
+          </Link>
         </CardContent>
       </Card>
     );
