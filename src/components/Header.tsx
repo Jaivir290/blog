@@ -1,4 +1,4 @@
-import { PenTool, Search, Menu, User, Bell, LogOut, X, BarChart3 } from "lucide-react";
+import { PenTool, Search, Menu, User, LogOut, X, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
