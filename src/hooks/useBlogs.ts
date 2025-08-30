@@ -570,6 +570,45 @@ export const useAdminBlogs = () => {
   };
 };
 
+export const useLikedBlogs = () => {
+  const [likedBlogs, setLikedBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchLiked = async () => {
+    try {
+      setLoading(true);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) { setLikedBlogs([]); return; }
+      const { data: likeRows, error: likesErr } = await supabase
+        .from('blog_likes')
+        .select('blog_id')
+        .eq('user_id', user.id);
+      if (likesErr) throw likesErr;
+      const ids = (likeRows || []).map((r: any) => r.blog_id);
+      if (!ids.length) { setLikedBlogs([]); return; }
+      const { data, error } = await supabase
+        .from('blogs')
+        .select(`*, profiles:author_id ( display_name, avatar_url )`)
+        .in('id', ids)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      // mark liked flag for UI consistency
+      const set = new Set(ids);
+      setLikedBlogs(((data as Blog[]) || []).map(b => ({ ...b, is_liked: set.has(b.id) })));
+    } catch (error: any) {
+      toast({ title: 'Error loading liked blogs', description: error.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchLiked(); }, []);
+
+  return { likedBlogs, loading, fetchLiked };
+};
+
 export const useSavedBlogs = () => {
   const [savedBlogs, setSavedBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
