@@ -184,6 +184,33 @@ export const useBlogs = () => {
     setBlogs(allBlogs);
   };
 
+  const createDraft = async (blogData: {
+    title: string;
+    content: string;
+    excerpt?: string;
+    tags?: string[];
+    featured_image_url?: string | null;
+  }) => {
+    try {
+      if (!user) throw new Error("User not authenticated");
+      const { data, error } = await supabase
+        .from('blogs')
+        .insert([{
+          ...blogData,
+          author_id: user.id,
+          status: 'hidden'
+        }])
+        .select()
+        .single();
+      if (error) throw error;
+      toast({ title: "Draft saved", description: "You can continue editing from your profile." });
+      return { data, error: null };
+    } catch (error: any) {
+      toast({ title: "Failed to save draft", description: error.message, variant: "destructive" });
+      return { data: null, error } as any;
+    }
+  };
+
   const createBlog = async (blogData: {
     title: string;
     content: string;
@@ -407,6 +434,7 @@ export const useBlogs = () => {
     loading,
     searchQuery,
     fetchBlogs,
+    createDraft,
     createBlog,
     likeBlog,
     toggleSaveBlog,
