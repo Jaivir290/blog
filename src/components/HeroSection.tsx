@@ -2,12 +2,52 @@ import { Button } from "@/components/ui/button";
 import { PenTool, TrendingUp, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import AuthDialog from "@/components/AuthDialog";
 
 const HeroSection = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [articlesCount, setArticlesCount] = useState<number | null>(null);
+  const [activeUsers, setActiveUsers] = useState<number | null>(null);
+  const [monthlyReaders, setMonthlyReaders] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const [articlesRes, usersRes] = await Promise.all([
+          supabase.from('blogs').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        ]);
+        setArticlesCount(articlesRes.count ?? 0);
+        setActiveUsers(usersRes.count ?? 0);
+
+        const start = new Date();
+        start.setDate(start.getDate() - 30);
+        const { data: analyticsRows } = await supabase
+          .from('analytics')
+          .select('value,date,metric_type')
+          .eq('metric_type', 'views')
+          .gte('date', start.toISOString());
+        const total = (analyticsRows || []).reduce((sum: number, r: any) => sum + (r.value || 0), 0);
+        setMonthlyReaders(total);
+      } catch (_) {
+        setArticlesCount(0);
+        setActiveUsers(0);
+        setMonthlyReaders(0);
+      }
+    };
+    loadStats();
+  }, []);
+
+  const formatNumber = (n: number | null) => {
+    if (n == null) return '—';
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M+';
+    if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K+';
+    return String(n);
+  };
 
   return (
     <section className="relative min-h-[70vh] flex items-center justify-center bg-gradient-hero overflow-hidden">
@@ -62,7 +102,7 @@ const HeroSection = () => {
               <div className="bg-primary/10 p-3 rounded-full mb-3">
                 <PenTool className="h-6 w-6 text-primary" />
               </div>
-              <div className="text-2xl font-bold text-foreground">500+</div>
+              <div className="text-2xl font-bold text-foreground">{formatNumber(articlesCount)}</div>
               <div className="text-sm text-muted-foreground">Articles Published</div>
             </div>
             
@@ -70,15 +110,15 @@ const HeroSection = () => {
               <div className="bg-accent/10 p-3 rounded-full mb-3">
                 <Users className="h-6 w-6 text-accent" />
               </div>
-              <div className="text-2xl font-bold text-foreground">1,200+</div>
-              <div className="text-sm text-muted-foreground">Active Writers</div>
+              <div className="text-2xl font-bold text-foreground">{formatNumber(activeUsers)}</div>
+              <div className="text-sm text-muted-foreground">Active Users</div>
             </div>
             
             <div className="flex flex-col items-center">
               <div className="bg-primary/10 p-3 rounded-full mb-3">
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
-              <div className="text-2xl font-bold text-foreground">50K+</div>
+              <div className="text-2xl font-bold text-foreground">{formatNumber(monthlyReaders)}</div>
               <div className="text-sm text-muted-foreground">Monthly Readers</div>
             </div>
           </div>
