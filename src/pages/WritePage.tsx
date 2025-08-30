@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBlogs } from "@/hooks/useBlogs";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader as DialogHdr, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const WritePage = () => {
   const [title, setTitle] = useState("");
