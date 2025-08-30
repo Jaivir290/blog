@@ -8,7 +8,19 @@ import { useNavigate } from "react-router-dom";
 
 const NotificationBell = () => {
   const { notifications, markAsRead, markAllAsRead } = useNotifications();
+  const navigate = useNavigate();
   const unread = notifications.filter(n => !n.is_read).length;
+  const onClickItem = async (n: any) => {
+    await markAsRead(n.id);
+    const link: string | undefined = n.link || (n.metadata && n.metadata.link);
+    if (link) {
+      if (/^https?:\/\//i.test(link)) {
+        window.location.href = link;
+      } else {
+        navigate(link);
+      }
+    }
+  };
 
   return (
     <DropdownMenu>
